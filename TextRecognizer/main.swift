@@ -15,17 +15,10 @@ let range = (2...2)
 main()
 
 func main() {
-    var allPages = [Page]()
     
     let outPath = "/Users/matthewwylder/Desktop/textOutput.txt"
-    let outURL = URL(fileURLWithPath: outPath)
-    
-    if !FileManager.default.fileExists(atPath: outPath) {
-        FileManager.default.createFile(
-            atPath: outPath,
-            contents: "".data(using: .unicode)!
-        )
-    }
+    var allPages = [Page]()
+    setupFile(outPath)
     
     for i in range {
         let curPath = "/Users/matthewwylder/Desktop/screencapture3/frame-\(i).png"
@@ -38,29 +31,54 @@ func main() {
         }
     }
     
-    write(allPages, to: outURL)
+    write(allPages, to: outPath)
+}
+
+func setupFile(_ path: String) {
+    guard let data = "".data(using: .unicode) else {
+        print("failed to make data from empty string? weird.")
+        return
+    }
+    
+    if !FileManager.default.fileExists(atPath: path) {
+        FileManager.default.createFile(
+            atPath: path,
+            contents: data
+        )
+    }
 }
 
 func requestVision(fromImageAt path: String,
                    completion: @escaping (VNRequest, Error?) -> Void) {
-    let data = NSData(contentsOfFile: path)!
-    let dataProvider = CGDataProvider(data: data)!
-    let png = CGImage(pngDataProviderSource: dataProvider,
-                      decode: nil,
-                      shouldInterpolate: false,
-                      intent: .defaultIntent)
-
-    let requestHandler = VNImageRequestHandler(cgImage: png!)
+    
+    guard let png = makeImage(from: path) else {
+        print("Failed to make CGImage for path \(path)")
+        return
+    }
+    
+    let requestHandler = VNImageRequestHandler(cgImage: png)
 
     //// Create a new request to recognize text.
     let request = VNRecognizeTextRequest(completionHandler: completion)
-    //
     do {
         // Perform the text-recognition request.
         try requestHandler.perform([request])
     } catch {
         print("Unable to perform the requests: \(error).")
     }
+}
+
+func makeImage(from path: String) -> CGImage? {
+    guard let data = NSData(contentsOfFile: path),
+          let dataProvider = CGDataProvider(data: data) else {
+        print("Failed to make dataProvider for path \(path)")
+        return nil
+    }
+    
+    return CGImage(pngDataProviderSource: dataProvider,
+                   decode: nil,
+                   shouldInterpolate: false,
+                   intent: .defaultIntent)
 }
 
 func makePages(from observations: [VNRecognizedTextObservation]) -> [Page] {
@@ -75,9 +93,10 @@ func makePages(from observations: [VNRecognizedTextObservation]) -> [Page] {
             return
         }
         
-        let curLine = Page.Line(text: curString,
-                                rightMargin: observation.boundingBox.maxX,
-                                baseline: observation.boundingBox.maxY)
+        let curLine = Page.Line(
+            text: curString,
+            rightMargin: observation.boundingBox.maxX,
+            baseline: observation.boundingBox.maxY)
         
         // if text is left of center
         if observation.boundingBox.maxX <= 0.5 {
@@ -90,7 +109,8 @@ func makePages(from observations: [VNRecognizedTextObservation]) -> [Page] {
     return [leftPage, rightPage]
 }
 
-func write(_ pages: [Page], to url: URL) {
+func write(_ pages: [Page], to path: String) {
+    let url = URL(fileURLWithPath: path)
     var resultText = ""
     
     for page in pages {

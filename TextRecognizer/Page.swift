@@ -17,6 +17,14 @@ class Page {
     var lines = [Line]()
 
     var content: String {
+        // create a line between the first and second to last line
+        // determine a tolerance for the entire paragraph.
+        // if the last line ends outside of that tolerance add a \n
+        //
+        // do something similar for line height.
+        //
+        // italics?
+        //
         var output = ""
         for line in lines {
             output.append(line.text)
