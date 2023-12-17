@@ -10,9 +10,8 @@ In Xcode, edit the Run scheme and add two arguments passed on launch:
 Run the scheme, and your output file will be created with the text from the images.
 
 ## Known issues 
-* The text formatter is not able to determine paragraph breaks properly.
+* The text formatter is not able to determine paragraph breaks properly. [Apple's API provides limited functionality](https://developer.apple.com/forums/thread/682495) and any formatting has to be written custom.
 * Since it was built with a book in mind, it is hard coded to separate pages down the middle
-
 
 ## Example output
 _note: markdown spacing was added by hand for this README, it is not part of the script output._
