@@ -9,20 +9,29 @@ import CoreGraphics
 import Foundation
 import Vision
 
-/// the screenshots are numbered 1-139
-let range = (2...2)
+guard CommandLine.arguments.count == 3 else {
+    print("""
+          Invalid command line arguments, expected format:
+          textRecognizer [inputDir] [outputFileName]
+          """)
+    exit(1)
+}
 
-main()
+main(
+    directory: CommandLine.arguments[1],
+    outPath: CommandLine.arguments[2]
+)
 
-func main() {
-    
-    let outPath = "/Users/matthewwylder/Desktop/textOutput.txt"
+func main(directory: String, outPath: String) {
+    guard let fileNames = getInputFilePaths(directory) else {
+        print("Failed to find contents for directory \(directory)")
+        return
+    }
     var allPages = [Page]()
-    setupFile(outPath)
+    setupOutputFile(outPath)
     
-    for i in range {
-        let curPath = "/Users/matthewwylder/Desktop/screencapture3/frame-\(i).png"
-        requestVision(fromImageAt: curPath) { request, error in
+    for fileName in fileNames {
+        requestTextRecognition(fromImageAt: fileName) { request, error in
             guard let results = request.results as? [VNRecognizedTextObservation] else {
                 print(error ?? "Failed to get results")
                 return
@@ -30,11 +39,21 @@ func main() {
             allPages.append(contentsOf: makePages(from: results))
         }
     }
-    
     write(allPages, to: outPath)
 }
 
-func setupFile(_ path: String) {
+func getInputFilePaths(_ directory: String) -> [String]? {
+    guard let directoryURL = URL(string: directory),
+          let fileNames = try? FileManager.default.contentsOfDirectory(atPath: directory) else {
+        print("Failed to find contents for directory \(directory)")
+        return nil
+    }
+    return fileNames
+        .sorted { $0 > $1 }
+        .map { directoryURL.appendingPathComponent($0).absoluteString }
+}
+
+func setupOutputFile(_ path: String) {
     guard let data = "".data(using: .unicode) else {
         print("failed to make data from empty string? weird.")
         return
@@ -48,8 +67,8 @@ func setupFile(_ path: String) {
     }
 }
 
-func requestVision(fromImageAt path: String,
-                   completion: @escaping (VNRequest, Error?) -> Void) {
+func requestTextRecognition(fromImageAt path: String,
+                            completion: @escaping (VNRequest, Error?) -> Void) {
     
     guard let png = makeImage(from: path) else {
         print("Failed to make CGImage for path \(path)")
@@ -88,7 +107,7 @@ func makePages(from observations: [VNRecognizedTextObservation]) -> [Page] {
     
     observations.forEach { observation in
         // Return the string of the top VNRecognizedText instance.
-        guard var curString = observation.topCandidates(1).first?.string else {
+        guard let curString = observation.topCandidates(1).first?.string else {
             print("Found non-string observeration.")
             return
         }
