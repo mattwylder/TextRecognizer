@@ -49,8 +49,20 @@ func getInputFilePaths(_ directory: String) -> [String]? {
         print("Failed to find contents for directory \(directory)")
         return nil
     }
+    
     return fileNames
-        .sorted { $0 < $1 }
+        .drop { $0.hasPrefix(".") } // TODO: This is not filtering out .DS_Store.
+        .sorted { lhs, rhs in
+            guard let leftFileNumStr = lhs.split(separator: ".").first?.split(separator: "-").last,
+               let rightFileNumStr = rhs.split(separator: ".").first?.split(separator: "-").last,
+               let leftFileNum = Int(leftFileNumStr),
+               let rightFileNum = Int(rightFileNumStr) else {
+                print("invalid fileName: \"\(lhs)\" or \"\(rhs)\". Expected format: [name]-[integer].[extension]")
+                exit(1)
+                return false
+            }
+            return leftFileNum < rightFileNum
+        }
         .map { directoryURL.appendingPathComponent($0).absoluteString }
 }
 
