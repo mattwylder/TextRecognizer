@@ -5,15 +5,17 @@
 //  Created by Matthew Wylder on 12/16/23.
 //
 
-import Foundation
 import CoreGraphics
+import Foundation
 import Vision
+
+/// the screenshots are numbered 1-139
+let range = (2...2)
 
 main()
 
 func main() {
-    
-    var resultText = ""
+    var allPages = [Page]()
     
     let outPath = "/Users/matthewwylder/Desktop/textOutput.txt"
     let outURL = URL(fileURLWithPath: outPath)
@@ -25,19 +27,18 @@ func main() {
         )
     }
     
-    // the pages are number 1-139
-    for i in (1...3) {
+    for i in range {
         let curPath = "/Users/matthewwylder/Desktop/screencapture3/frame-\(i).png"
         requestVision(fromImageAt: curPath) { request, error in
             guard let results = request.results as? [VNRecognizedTextObservation] else {
                 print(error ?? "Failed to get results")
                 return
             }
-            resultText.append(text(from: results))
+            allPages.append(contentsOf: makePages(from: results))
         }
     }
     
-    try! resultText.data(using: .unicode)?.write(to: outURL)
+    write(allPages, to: outURL)
 }
 
 func requestVision(fromImageAt path: String,
@@ -62,23 +63,39 @@ func requestVision(fromImageAt path: String,
     }
 }
 
-func text(from observations: [VNRecognizedTextObservation]) -> String {
-    var outString = ""
+func makePages(from observations: [VNRecognizedTextObservation]) -> [Page] {
+    
+    let leftPage = Page()
+    let rightPage = Page()
     
     observations.forEach { observation in
         // Return the string of the top VNRecognizedText instance.
-        guard let curString = observation.topCandidates(1).first?.string else {
+        guard var curString = observation.topCandidates(1).first?.string else {
             print("Found non-string observeration.")
             return
         }
         
-        if let _ = Int(curString) {
-            // this is probably a page number
-            outString.append("\n\(curString)\n\n")
+        let curLine = Page.Line(text: curString,
+                                rightMargin: observation.boundingBox.maxX,
+                                baseline: observation.boundingBox.maxY)
+        
+        // if text is left of center
+        if observation.boundingBox.maxX <= 0.5 {
+            leftPage.lines.append(curLine)
         } else {
-            outString.append("\(curString) ")
+            rightPage.lines.append(curLine)
         }
     }
     
-    return outString
+    return [leftPage, rightPage]
+}
+
+func write(_ pages: [Page], to url: URL) {
+    var resultText = ""
+    
+    for page in pages {
+        resultText.append(page.content)
+    }
+    
+    try! resultText.data(using: .unicode)?.write(to: url)
 }
