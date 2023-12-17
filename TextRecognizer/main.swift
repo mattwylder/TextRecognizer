@@ -114,8 +114,7 @@ func makePages(from observations: [VNRecognizedTextObservation]) -> [Page] {
         
         let curLine = Page.Line(
             text: curString,
-            rightMargin: observation.boundingBox.maxX,
-            baseline: observation.boundingBox.maxY)
+            frame: observation.boundingBox)
         
         // if text is left of center
         if observation.boundingBox.maxX <= 0.5 {
