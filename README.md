@@ -1,6 +1,6 @@
 # Bulk Text From Images
 
-I wanted a digital copy of Adolphe Thiers' 1881 _History of the French Revolution_. [Archive.org has a copy of volume II](https://archive.org/details/historyoffrench02thieuoft/page/n5/mode/2up), but their image recognition software generated an epub with only 12% confidence in its text recognition. Words were missing in the first page-turn. I was curious if Apple's [Vision text recognition](https://developer.apple.com/documentation/vision/recognizing_text_in_images) could do better. In some cases yes. The word "council-chamber", which did not appear in the Archive.org generated epub, does appear in Apple's output (see end of the first paragraph below).
+I wanted a digital copy of Adolphe Thiers' 1881 _History of the French Revolution_. [Archive.org has a copy of volume II](https://archive.org/details/historyoffrench02thieuoft/page/n5/mode/2up), but their image recognition software generated an epub with only 12% confidence in its text recognition. Words were missing in the first page-turn. I was curious if Apple's [Vision text recognition](https://developer.apple.com/documentation/vision/recognizing_text_in_images) could do better. In some cases yes. The word "council-chamber", which did not appear in the Archive.org generated epub, does appear in Apple's output (see end of the first paragraph below). Regardless, it's interesting to have more control over how the output is created.
 
 ## Usage
 In Xcode, edit the Run scheme and add two arguments passed on launch:
