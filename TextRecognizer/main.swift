@@ -51,7 +51,7 @@ func getInputFilePaths(_ directory: String) -> [String]? {
     }
     
     return fileNames
-        .drop { $0.hasPrefix(".") } // TODO: This is not filtering out .DS_Store.
+        .filter { !$0.hasPrefix(".") }
         .sorted { lhs, rhs in
             guard let leftFileNumStr = lhs.split(separator: ".").first?.split(separator: "-").last,
                let rightFileNumStr = rhs.split(separator: ".").first?.split(separator: "-").last,
@@ -59,7 +59,6 @@ func getInputFilePaths(_ directory: String) -> [String]? {
                let rightFileNum = Int(rightFileNumStr) else {
                 print("invalid fileName: \"\(lhs)\" or \"\(rhs)\". Expected format: [name]-[integer].[extension]")
                 exit(1)
-                return false
             }
             return leftFileNum < rightFileNum
         }
@@ -84,7 +83,7 @@ func requestTextRecognition(fromImageAt path: String,
                             completion: @escaping (VNRequest, Error?) -> Void) {
     
     guard let png = makeImage(from: path) else {
-        print("Failed to make CGImage for path \(path)")
+        print("Ignoring attempt to create CGImage from invalid path \(path)")
         return
     }
     
