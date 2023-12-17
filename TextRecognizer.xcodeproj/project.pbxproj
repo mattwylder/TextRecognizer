@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		E2221F512B2E6EC8003D9D76 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2221F502B2E6EC8003D9D76 /* main.swift */; };
 		E2221F582B2E98EB003D9D76 /* Page.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2221F572B2E98EB003D9D76 /* Page.swift */; };
+		E2221F5B2B2EEF62003D9D76 /* StatKit in Frameworks */ = {isa = PBXBuildFile; productRef = E2221F5A2B2EEF62003D9D76 /* StatKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -34,6 +35,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E2221F5B2B2EEF62003D9D76 /* StatKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -81,6 +83,9 @@
 			dependencies = (
 			);
 			name = TextRecognizer;
+			packageProductDependencies = (
+				E2221F5A2B2EEF62003D9D76 /* StatKit */,
+			);
 			productName = TextRecognizer;
 			productReference = E2221F4D2B2E6EC8003D9D76 /* TextRecognizer */;
 			productType = "com.apple.product-type.tool";
@@ -109,6 +114,9 @@
 				Base,
 			);
 			mainGroup = E2221F442B2E6EC8003D9D76;
+			packageReferences = (
+				E2221F592B2EEF62003D9D76 /* XCRemoteSwiftPackageReference "StatKit" */,
+			);
 			productRefGroup = E2221F4E2B2E6EC8003D9D76 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -290,6 +298,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		E2221F592B2EEF62003D9D76 /* XCRemoteSwiftPackageReference "StatKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/JimmyMAndersson/StatKit.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.6.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		E2221F5A2B2EEF62003D9D76 /* StatKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E2221F592B2EEF62003D9D76 /* XCRemoteSwiftPackageReference "StatKit" */;
+			productName = StatKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = E2221F452B2E6EC8003D9D76 /* Project object */;
 }
