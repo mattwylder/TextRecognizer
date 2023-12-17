@@ -28,6 +28,7 @@
 		E2221F4D2B2E6EC8003D9D76 /* TextRecognizer */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = TextRecognizer; sourceTree = BUILT_PRODUCTS_DIR; };
 		E2221F502B2E6EC8003D9D76 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		E2221F572B2E98EB003D9D76 /* Page.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Page.swift; sourceTree = "<group>"; };
+		E2CA684D2B2F9413001C9976 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -45,6 +46,7 @@
 		E2221F442B2E6EC8003D9D76 = {
 			isa = PBXGroup;
 			children = (
+				E2CA684D2B2F9413001C9976 /* README.md */,
 				E2221F4F2B2E6EC8003D9D76 /* TextRecognizer */,
 				E2221F4E2B2E6EC8003D9D76 /* Products */,
 			);
