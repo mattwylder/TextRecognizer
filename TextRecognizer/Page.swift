@@ -7,6 +7,7 @@
 
 import CoreGraphics
 import Foundation
+import StatKit
 
 class Page {
     struct Line {
@@ -24,9 +25,18 @@ class Page {
     var lines = [Line]()
 
     var content: String {
+        let mean = mean(of: lines, variable: \.width)
+        let standardDev = standardDeviation(of: lines, variable: \.width, from: .population)
+        let oneStdDevBelow = mean - standardDev
         var output = ""
         for line in lines {
             output.append(line.text)
+    
+            if line.width < oneStdDevBelow {
+                output.append("\n\t")
+            } else {
+                output.append(" ")
+            }
         }
         return output
     }

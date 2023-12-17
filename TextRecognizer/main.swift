@@ -31,6 +31,7 @@ func main(directory: String, outPath: String) {
     setupOutputFile(outPath)
     
     for fileName in fileNames {
+        print(fileName)
         requestTextRecognition(fromImageAt: fileName) { request, error in
             guard let results = request.results as? [VNRecognizedTextObservation] else {
                 print(error ?? "Failed to get results")
@@ -49,7 +50,7 @@ func getInputFilePaths(_ directory: String) -> [String]? {
         return nil
     }
     return fileNames
-        .sorted { $0 > $1 }
+        .sorted { $0 < $1 }
         .map { directoryURL.appendingPathComponent($0).absoluteString }
 }
 
