@@ -10,8 +10,11 @@ In Xcode, edit the Run scheme and add two arguments passed on launch:
 Run the scheme, and your output file will be created with the text from the images.
 
 ## Known issues 
-* The text formatter is not able to determine paragraph breaks properly. [Apple's API provides limited functionality](https://developer.apple.com/forums/thread/682495) and any formatting has to be written custom.
-* Since it was built with a book in mind, it is hard coded to separate pages down the middle of the image.
+* Paragraph breaks are iffy. [Apple's Vision API does not provide paragraph detection.](https://developer.apple.com/forums/thread/682495). I try to determine a paragraph break by comparing the length lines on each page. The result is acceptable but not perfect. Images of old books are warped by scanners, scanned at angles, etc. A better implementation might add custom text recognition to detect the shape of full paragraphs.
+* Header text (page number, title name, chapter name) on each page often gets interlaced with the text body, e.g. "2 HISTORY OF THE" and "FRENCH REVOLUTION" are inserted between page breaks.
+* Words broken up between two lines and separated by a hyphens are not concatenated. The code doesn't know if the hyphen is genuinely part of the word: e.g. "rein-stated"(no), "Austro-Hungarian" (yes), or "grape-shot" (maybe). 
+* Since it was built with a book in mind, it is hard coded to separate pages down the middle of the image. If you want to use it for any other purpose you will have to change the implementation.
+* It's not optimized. The entire output is written to file as one massive string, rather than page by page. Operations like iteration over filenames could be optimized as well. Some sacrifices were in the name of readability, others just to get it working.
 
 ## Example output
 _note: markdown spacing was added by hand for this README, it is not part of the script output._
