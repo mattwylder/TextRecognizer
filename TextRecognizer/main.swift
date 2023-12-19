@@ -6,13 +6,14 @@
 //
 
 import CoreGraphics
+import CoreImage
 import Foundation
 import Vision
 
-guard CommandLine.arguments.count == 3 else {
+guard CommandLine.arguments.count >= 3 else {
     print("""
           Invalid command line arguments, expected format:
-          textRecognizer [inputDir] [outputFileName]
+          textRecognizer inputDir outputFileName [intermediateImageDir]
           """)
     exit(1)
 }
@@ -23,57 +24,54 @@ guard let inputURL = URL(string: CommandLine.arguments[1]) else {
 }
 
 let outputURL = URL(fileURLWithPath: CommandLine.arguments[2])
+var intermediateDir: URL?
+
+if CommandLine.arguments.count >= 4 {
+    if let url = URL(string: CommandLine.arguments[3]) {
+        intermediateDir = url
+    } else {
+        print("Ignoring invalid intermediate URL")
+    }
+}
 
 main(
     inURL: inputURL,
-    outURL: outputURL
+    textFileURL: outputURL,
+    intermediateDir: intermediateDir
 )
 
-func main(inURL: URL, outURL: URL) {
+
+func main(inURL: URL, textFileURL: URL, intermediateDir: URL? = nil) {
     
-    guard let fileNames = getInputFilePaths(inURL) else {
-        print("Failed to find contents for directory \(inURL.path)")
-        return
-    }
-    setupOutputFile(outURL)
+    let imageProcessor = ImageProcessor()
+    setupOutputFile(textFileURL)
     
-    for fileName in fileNames {
-        print(fileName)
-        guard let image = makeImage(from: fileName) else {
-            print("Aborting attempt to create CGImage from invalid path \(fileName)")
-            return
+    for file in getInputFilePaths(inURL) {
+        print(file.lastPathComponent)
+        guard let image = imageProcessor.process(file: file) else {
+            print("Failed to process image")
+            exit(1)
         }
         
-        let cropped = image.cropping(to: CGRect(x: 178, y: 35,
-                                                width: 1433, height: 1145))!
+        if let intermediateDir,
+           let cgImage = ImageProcessor().cgImage(from: image) {
+            writeImage(cgImage, to: intermediateDir, name: file.lastPathComponent)
+        }
         
-        requestTextRecognition(from: cropped) { request, error in
+        requestTextRecognition(from: image) { request, error in
             guard let results = request.results as? [VNRecognizedTextObservation] else {
                 print(error ?? "Failed to get results")
                 return
             }
-            
+
             makePages(from: results).forEach {
-                write($0, to: outURL)
+                writeText($0, to: textFileURL)
             }
         }
     }
 }
 
 // MARK: Image management
-
-func makeImage(from path: String) -> CGImage? {
-    guard let data = NSData(contentsOfFile: path),
-          let dataProvider = CGDataProvider(data: data) else {
-        print("Failed to make dataProvider for path \(path)")
-        return nil
-    }
-    
-    return CGImage(pngDataProviderSource: dataProvider,
-                   decode: nil,
-                   shouldInterpolate: false,
-                   intent: .defaultIntent)
-}
 
 func makePages(from observations: [VNRecognizedTextObservation]) -> [Page] {
     
@@ -101,10 +99,10 @@ func makePages(from observations: [VNRecognizedTextObservation]) -> [Page] {
     return [leftPage, rightPage]
 }
 
-func requestTextRecognition(from image: CGImage,
+func requestTextRecognition(from image: CIImage,
                             completion: @escaping (VNRequest, Error?) -> Void) {
     
-    let requestHandler = VNImageRequestHandler(cgImage: image)
+    let requestHandler = VNImageRequestHandler(ciImage: image)
 
     //// Create a new request to recognize text.
     let request = VNRecognizeTextRequest(completionHandler: completion)
@@ -118,17 +116,17 @@ func requestTextRecognition(from image: CGImage,
 
 // MARK: File and URL management
 
-func getInputFilePaths(_ url: URL) -> [String]? {
+func getInputFilePaths(_ url: URL) -> [URL] {
     
     if url.isFileURL {
-        return [url.path]
+        return [url]
     }
     do {
         return try FileManager.default
             .contentsOfDirectory(atPath: url.path)
             .filter { !$0.hasPrefix(".") }
             .sorted(by: sortFileNames)
-            .map { url.appendingPathComponent($0).absoluteString }
+            .compactMap { url.appendingPathComponent($0) }
     }
     catch {
         print("Failed to find contents for directory \(error)")
@@ -167,7 +165,18 @@ func sortFileNames(lhs: String, rhs: String) -> Bool {
     return leftFileNum < rightFileNum
 }
 
-func write(_ page: Page, to url: URL) {
+func writeImage(_ image: CGImage, to dir: URL, name: String) {
+    if let writeURL = URL(string: "file://\(dir.appendingPathComponent(name))"),
+       let dest = CGImageDestinationCreateWithURL(writeURL as CFURL,
+                                                   kUTTypePNG, 1, nil) {
+        CGImageDestinationAddImage(dest, image, nil)
+        let _ = CGImageDestinationFinalize(dest)
+    } else {
+        print("skipping intermediate image save")
+    }
+}
+
+func writeText(_ page: Page, to url: URL) {
     guard let data = page.content.data(using: .unicode) else {
         print("Failed to convert Page content to data")
         exit(1)
