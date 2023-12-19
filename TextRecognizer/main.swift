@@ -33,7 +33,7 @@ func main(inPath: String, outPath: String) {
         return
     }
     let outputURL = URL(fileURLWithPath: outPath)
-    setupOutputFile(outPath)
+    setupOutputFile(outputURL)
     
     for fileName in fileNames {
         print(fileName)
@@ -85,17 +85,23 @@ func getInputFilePaths(_ url: URL) -> [String]? {
         .map { url.appendingPathComponent($0).absoluteString }
 }
 
-func setupOutputFile(_ path: String) {
+func setupOutputFile(_ url: URL) {
     guard let data = "".data(using: .unicode) else {
         print("failed to make data from empty string? weird.")
         return
     }
-    
-    if !FileManager.default.fileExists(atPath: path) {
+    guard FileManager.default.fileExists(atPath: url.path) else {
         FileManager.default.createFile(
-            atPath: path,
+            atPath: url.path,
             contents: data
         )
+        return
+    }
+    
+    do {
+        try data.write(to: url)
+    } catch {
+        print(error)
     }
 }
 
@@ -143,7 +149,7 @@ func makePages(from observations: [VNRecognizedTextObservation]) -> [Page] {
             text: curString,
             frame: observation.boundingBox)
         
-        if observation.boundingBox.minX >= 0.5 {
+        if observation.boundingBox.minX <= 0.5 {
             leftPage.lines.append(curLine)
         } else {
             rightPage.lines.append(curLine)
