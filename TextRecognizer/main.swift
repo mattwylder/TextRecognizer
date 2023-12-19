@@ -17,23 +17,25 @@ guard CommandLine.arguments.count == 3 else {
     exit(1)
 }
 
+guard let inputURL = URL(string: CommandLine.arguments[1]) else {
+    print("Failed to find contents for directory \(CommandLine.arguments[1])")
+    exit(1)
+}
+
+let outputURL = URL(fileURLWithPath: CommandLine.arguments[2])
+
 main(
-    inPath: CommandLine.arguments[1],
-    outPath: CommandLine.arguments[2]
+    inURL: inputURL,
+    outURL: outputURL
 )
 
-func main(inPath: String, outPath: String) {
-    guard let inputURL = URL(string: inPath) else {
-        print("bad input path")
-        exit(1)
-    }
+func main(inURL: URL, outURL: URL) {
     
-    guard let fileNames = getInputFilePaths(inputURL) else {
-        print("Failed to find contents for directory \(inPath)")
+    guard let fileNames = getInputFilePaths(inURL) else {
+        print("Failed to find contents for directory \(inURL.path)")
         return
     }
-    let outputURL = URL(fileURLWithPath: outPath)
-    setupOutputFile(outputURL)
+    setupOutputFile(outURL)
     
     for fileName in fileNames {
         print(fileName)
@@ -52,73 +54,13 @@ func main(inPath: String, outPath: String) {
             }
             
             makePages(from: results).forEach {
-                write($0, to: outputURL)
+                write($0, to: outURL)
             }
         }
     }
 }
 
-func getInputFilePaths(_ url: URL) -> [String]? {
-    
-    if url.isFileURL {
-        return [url.path]
-    }
-    
-    guard let fileNames = try? FileManager.default
-        .contentsOfDirectory(atPath: url.path) else {
-        print("Failed to find contents for directory \(url.path)")
-        exit(1)
-    }
-    
-    return fileNames
-        .filter { !$0.hasPrefix(".") }
-        .sorted { lhs, rhs in
-            guard let leftFileNumStr = lhs.split(separator: ".").first?.split(separator: "-").last,
-               let rightFileNumStr = rhs.split(separator: ".").first?.split(separator: "-").last,
-               let leftFileNum = Int(leftFileNumStr),
-               let rightFileNum = Int(rightFileNumStr) else {
-                print("invalid fileName: \"\(lhs)\" or \"\(rhs)\". Expected format: [name]-[integer].[extension]")
-                exit(1)
-            }
-            return leftFileNum < rightFileNum
-        }
-        .map { url.appendingPathComponent($0).absoluteString }
-}
-
-func setupOutputFile(_ url: URL) {
-    guard let data = "".data(using: .unicode) else {
-        print("failed to make data from empty string? weird.")
-        return
-    }
-    guard FileManager.default.fileExists(atPath: url.path) else {
-        FileManager.default.createFile(
-            atPath: url.path,
-            contents: data
-        )
-        return
-    }
-    
-    do {
-        try data.write(to: url)
-    } catch {
-        print(error)
-    }
-}
-
-func requestTextRecognition(from image: CGImage,
-                            completion: @escaping (VNRequest, Error?) -> Void) {
-    
-    let requestHandler = VNImageRequestHandler(cgImage: image)
-
-    //// Create a new request to recognize text.
-    let request = VNRecognizeTextRequest(completionHandler: completion)
-    do {
-        // Perform the text-recognition request.
-        try requestHandler.perform([request])
-    } catch {
-        print("Unable to perform the requests: \(error).")
-    }
-}
+// MARK: Image management
 
 func makeImage(from path: String) -> CGImage? {
     guard let data = NSData(contentsOfFile: path),
@@ -157,6 +99,72 @@ func makePages(from observations: [VNRecognizedTextObservation]) -> [Page] {
     }
     
     return [leftPage, rightPage]
+}
+
+func requestTextRecognition(from image: CGImage,
+                            completion: @escaping (VNRequest, Error?) -> Void) {
+    
+    let requestHandler = VNImageRequestHandler(cgImage: image)
+
+    //// Create a new request to recognize text.
+    let request = VNRecognizeTextRequest(completionHandler: completion)
+    do {
+        // Perform the text-recognition request.
+        try requestHandler.perform([request])
+    } catch {
+        print("Unable to perform the requests: \(error).")
+    }
+}
+
+// MARK: File and URL management
+
+func getInputFilePaths(_ url: URL) -> [String]? {
+    
+    if url.isFileURL {
+        return [url.path]
+    }
+    do {
+        return try FileManager.default
+            .contentsOfDirectory(atPath: url.path)
+            .filter { !$0.hasPrefix(".") }
+            .sorted(by: sortFileNames)
+            .map { url.appendingPathComponent($0).absoluteString }
+    }
+    catch {
+        print("Failed to find contents for directory \(error)")
+        exit(1)
+    }
+}
+
+func setupOutputFile(_ url: URL) {
+    guard let data = "".data(using: .unicode) else {
+        print("failed to make data from empty string? weird.")
+        return
+    }
+    guard FileManager.default.fileExists(atPath: url.path) else {
+        FileManager.default.createFile(
+            atPath: url.path,
+            contents: data
+        )
+        return
+    }
+    
+    do {
+        try data.write(to: url)
+    } catch {
+        print(error)
+    }
+}
+
+func sortFileNames(lhs: String, rhs: String) -> Bool {
+    guard let leftFileNumStr = lhs.split(separator: ".").first?.split(separator: "-").last,
+       let rightFileNumStr = rhs.split(separator: ".").first?.split(separator: "-").last,
+       let leftFileNum = Int(leftFileNumStr),
+       let rightFileNum = Int(rightFileNumStr) else {
+        print("invalid fileName: \"\(lhs)\" or \"\(rhs)\". Expected format: [name]-[integer].[extension]")
+        exit(1)
+    }
+    return leftFileNum < rightFileNum
 }
 
 func write(_ page: Page, to url: URL) {
