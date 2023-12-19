@@ -18,36 +18,56 @@ guard CommandLine.arguments.count == 3 else {
 }
 
 main(
-    directory: CommandLine.arguments[1],
+    inPath: CommandLine.arguments[1],
     outPath: CommandLine.arguments[2]
 )
 
-func main(directory: String, outPath: String) {
-    guard let fileNames = getInputFilePaths(directory) else {
-        print("Failed to find contents for directory \(directory)")
+func main(inPath: String, outPath: String) {
+    guard let inputURL = URL(string: inPath) else {
+        print("bad input path")
+        exit(1)
+    }
+    
+    guard let fileNames = getInputFilePaths(inputURL) else {
+        print("Failed to find contents for directory \(inPath)")
         return
     }
-    var allPages = [Page]()
+    let outputURL = URL(fileURLWithPath: outPath)
     setupOutputFile(outPath)
     
     for fileName in fileNames {
         print(fileName)
-        requestTextRecognition(fromImageAt: fileName) { request, error in
+        guard let image = makeImage(from: fileName) else {
+            print("Aborting attempt to create CGImage from invalid path \(fileName)")
+            return
+        }
+        
+        let cropped = image.cropping(to: CGRect(x: 178, y: 35,
+                                                width: 1433, height: 1145))!
+        
+        requestTextRecognition(from: cropped) { request, error in
             guard let results = request.results as? [VNRecognizedTextObservation] else {
                 print(error ?? "Failed to get results")
                 return
             }
-            allPages.append(contentsOf: makePages(from: results))
+            
+            makePages(from: results).forEach {
+                write($0, to: outputURL)
+            }
         }
     }
-    write(allPages, to: outPath)
 }
 
-func getInputFilePaths(_ directory: String) -> [String]? {
-    guard let directoryURL = URL(string: directory),
-          let fileNames = try? FileManager.default.contentsOfDirectory(atPath: directory) else {
-        print("Failed to find contents for directory \(directory)")
-        return nil
+func getInputFilePaths(_ url: URL) -> [String]? {
+    
+    if url.isFileURL {
+        return [url.path]
+    }
+    
+    guard let fileNames = try? FileManager.default
+        .contentsOfDirectory(atPath: url.path) else {
+        print("Failed to find contents for directory \(url.path)")
+        exit(1)
     }
     
     return fileNames
@@ -62,7 +82,7 @@ func getInputFilePaths(_ directory: String) -> [String]? {
             }
             return leftFileNum < rightFileNum
         }
-        .map { directoryURL.appendingPathComponent($0).absoluteString }
+        .map { url.appendingPathComponent($0).absoluteString }
 }
 
 func setupOutputFile(_ path: String) {
@@ -79,15 +99,10 @@ func setupOutputFile(_ path: String) {
     }
 }
 
-func requestTextRecognition(fromImageAt path: String,
+func requestTextRecognition(from image: CGImage,
                             completion: @escaping (VNRequest, Error?) -> Void) {
     
-    guard let png = makeImage(from: path) else {
-        print("Ignoring attempt to create CGImage from invalid path \(path)")
-        return
-    }
-    
-    let requestHandler = VNImageRequestHandler(cgImage: png)
+    let requestHandler = VNImageRequestHandler(cgImage: image)
 
     //// Create a new request to recognize text.
     let request = VNRecognizeTextRequest(completionHandler: completion)
@@ -128,8 +143,7 @@ func makePages(from observations: [VNRecognizedTextObservation]) -> [Page] {
             text: curString,
             frame: observation.boundingBox)
         
-        // if text is left of center
-        if observation.boundingBox.maxX <= 0.5 {
+        if observation.boundingBox.minX >= 0.5 {
             leftPage.lines.append(curLine)
         } else {
             rightPage.lines.append(curLine)
@@ -139,13 +153,19 @@ func makePages(from observations: [VNRecognizedTextObservation]) -> [Page] {
     return [leftPage, rightPage]
 }
 
-func write(_ pages: [Page], to path: String) {
-    let url = URL(fileURLWithPath: path)
-    var resultText = ""
-    
-    for page in pages {
-        resultText.append(page.content)
+func write(_ page: Page, to url: URL) {
+    guard let data = page.content.data(using: .unicode) else {
+        print("Failed to convert Page content to data")
+        exit(1)
     }
-    
-    try! resultText.data(using: .unicode)?.write(to: url)
+    do {
+        let file = try FileHandle(forWritingTo: url)
+        try file.seekToEnd()
+        try file.write(contentsOf: data)
+        try file.close()
+    }
+    catch {
+        print(error.localizedDescription)
+        exit(1)
+    }
 }
